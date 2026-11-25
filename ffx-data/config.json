@@ -41,6 +41,10 @@
           "price": 1800
         }
       ]
+    },
+    "uc": {
+      "name": "SSR UID Checker",
+      "title": "SSR UID CHECKER"
     }
   },
   "texts": {
