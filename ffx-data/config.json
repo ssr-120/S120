@@ -17,7 +17,32 @@
     }
   ],
   "images": null,
-  "prod": null,
+  "prod": {
+    "ff": {
+      "packages": [
+        {
+          "label": "200 FF LIKE- প্রতিদিন ১ আইডিতে ১বার",
+          "name": "100 FF LIKE",
+          "price": 8
+        },
+        {
+          "label": "3000 FF LIKE- 30 দিন এ পাবেন",
+          "name": "3000 FF LIKE",
+          "price": 180
+        },
+        {
+          "label": "6000 FF LIKE- 30 দিন এ পাবেন",
+          "name": "6000 FF LIKE",
+          "price": 900
+        },
+        {
+          "label": "12000 FF LIKE- 60 দিন এ পাবেন",
+          "name": "12000 FF LIKE",
+          "price": 1800
+        }
+      ]
+    }
+  },
   "texts": {
     "warn": "আসসালামু আলাইকুম। ওয়েবসাইটের কাজ এখনো চলমান। আশাকরি কয়েক দিনের মধ্যে কাজ শেষ হবে। Power by Mr Dark pro"
   }
