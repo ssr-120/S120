@@ -18,5 +18,7 @@
   ],
   "images": null,
   "prod": null,
-  "texts": null
+  "texts": {
+    "warn": "আসসালামু আলাইকুম। ওয়েবসাইটের কাজ এখনো চলমান। আশাকরি কয়েক দিনের মধ্যে কাজ শেষ হবে। Power by Mr Dark pro"
+  }
 }
