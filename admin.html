@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="/admin-manifest.json">
+<link rel="apple-touch-icon" href="/admin-icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FFX Admin">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Admin Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -242,6 +248,14 @@ main.sm{max-width:520px;padding:0}
 .g2 .lb{margin-top:0!important}
 .rl-row .ta{min-height:72px;background:#fff}
 .bn-row{background:#f6f9ff}
+
+.xw{display:grid;gap:10px;padding:4px 0 80px}
+.xch{display:flex;gap:8px;overflow-x:auto}.xc{flex:none;height:36px;padding:0 14px;border-radius:18px;border:1.5px solid var(--bd);background:#fff;font-weight:700;color:var(--mu);cursor:pointer}.xc.on{background:var(--v);border-color:var(--v);color:#fff}
+.xr{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:12px;display:grid;gap:6px}
+.xt{display:flex;justify-content:space-between;gap:8px}.xm{color:var(--mu);font-size:13px;word-break:break-word}
+.xi{height:42px}.xb{display:flex;gap:8px}.xb .btn{flex:1}
+.xcode{font-family:ui-monospace,monospace;font-size:13px;width:100%;border:1.5px solid var(--bd);border-radius:12px;padding:10px;min-height:90px;background:#fff;color:var(--tx)}
+.s-notice{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 46px 10px 12px;border-radius:12px;background:#0b1530;color:#fff;font-size:13px}.s-notice p{margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.s-nl{flex-shrink:0;padding:4px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.25);font-weight:700}.s-notice i{opacity:.7}
 </style>
 </head>
 <body>
@@ -285,6 +299,7 @@ main.sm{max-width:520px;padding:0}
     </div>
     <div class="err" id="lgErr"></div>
     <button class="btn block" id="lgBtn" type="submit">Log in</button>
+    <button type="button" id="lgInstall" style="display:none;margin:14px auto 0;background:none;border:0;color:var(--v);font-weight:700;font-size:14px;cursor:pointer">Install app</button>
   </form>
 </div>
 
@@ -296,6 +311,28 @@ main.sm{max-width:520px;padding:0}
 <div id="gh" role="status"></div>
 <div id="toast"></div>
 
+<script>
+(function(){
+  var dp=null;
+  function standalone(){return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true}
+  function ios(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+  window.adminApp={
+    canInstall:function(){return !standalone()},
+    install:function(done){
+      if(dp){var p=dp;dp=null;p.prompt();p.userChoice.then(function(){if(done)done()}).catch(function(){});return ''}
+      return ios()?'On iPhone: tap the Share button, then "Add to Home Screen".':'Open the browser menu (\u22ee) and tap "Install app" or "Add to Home screen".';
+    }
+  };
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dp=e});
+  window.addEventListener('appinstalled',function(){dp=null;var b=document.getElementById('lgInstall');if(b)b.style.display='none'});
+  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/admin-sw.js',{scope:'/admin'}).catch(function(){})})}
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.getElementById('lgInstall');if(!b||standalone())return;
+    b.style.display='block';
+    b.onclick=function(){var m=window.adminApp.install();if(m)alert(m)};
+  });
+})();
+</script>
 <script>
 (function(){
 'use strict';
@@ -368,7 +405,20 @@ async function enter(){
 }
 
 var SECTIONS=[
-  {id:'site',title:'Site Editor',icon:'edit',render:renderSite}
+  {id:'site',title:'Site Editor',icon:'edit',render:renderSite},
+  {id:'dash',title:'Dashboard',icon:'okc',render:renderDash},
+  {id:'orders',title:'Orders',icon:'okc',render:renderOrders},
+  {id:'addmoney',title:'Add Money requests',icon:'plus',render:renderAddMoney},
+  {id:'users',title:'Users & balance',icon:'edit',render:renderUsers},
+  {id:'invest',title:'Total added (list)',icon:'edit',render:renderInvest},
+  {id:'codes',title:'Redeem codes',icon:'edit',render:renderCodes},
+  {id:'payment',title:'Payment numbers',icon:'edit',render:renderPayment},
+  {id:'sms',title:'SMS auto-add (message forward)',icon:'edit',render:renderSms},
+  {id:'contact',title:'Contact & verified ticks',icon:'edit',render:renderContact},
+  {id:'bc',title:'BC Topup (auto top-up)',icon:'edit',render:renderBc},
+  {id:'env',title:'Keys & secrets (Telegram, Brevo, Google, password)',icon:'edit',render:renderEnv},
+  {id:'sitetext',title:'Website text (যেকোনো লেখা)',icon:'edit',render:renderSiteText},
+  {id:'db',title:'Database',icon:'edit',render:renderDb}
 ];
 
 function openMenu(){
@@ -379,6 +429,12 @@ function openMenu(){
       x.onclick=function(){closeSheet();show(sc.id)};
       b.appendChild(x);
     });
+    if(window.adminApp&&window.adminApp.canInstall()){
+      var ia=document.createElement('button');ia.type='button';ia.className='mi';
+      ia.innerHTML=icon('plus','width:18px;height:18px')+'Install app';
+      ia.onclick=function(){var m=window.adminApp.install(closeSheet);if(m){closeSheet();toast(m,'ok')}};
+      b.appendChild(ia);
+    }
     var l=document.createElement('a');l.className='mi';l.href='/';l.target='_blank';l.rel='noopener';
     l.innerHTML=icon('ext','width:18px;height:18px')+'View main site';b.appendChild(l);
     var o=document.createElement('button');o.type='button';o.className='mi out';
@@ -523,7 +579,7 @@ function drawSite(){
   if(!siteRoot||!document.body.contains(siteRoot))return;
   var c=state.cfg,I=c.images,logo=I.logo.src||I.logo.def,bn=c.banners,q=c.quick,P=c.products;
   if(prevIdx>=bn.length)prevIdx=0;
-  function pc(p){var im=I[p.img];return '<div class="ed"><div class="s-card" data-prod="'+p.key+'"><div class="im"><img src="'+esc(im.src||im.def)+'" alt=""></div><div class="cl">'+esc(p.name)+'</div></div>'+pen('Edit '+p.name,'p:'+p.key,true)+'</div>'}
+  function pc(p){var im=I[p.img];return '<div class="ed"'+(p.hidden?' style="opacity:.45"':'')+'><div class="s-card" data-prod="'+p.key+'"><div class="im"><img src="'+esc(im.src||im.def)+'" alt=""></div><div class="cl">'+esc(p.name)+(p.hidden?' (hidden)':'')+'</div></div>'+pen('Edit '+p.name,'p:'+p.key,true)+'</div>'}
   function sec(id){return '<div class="ed s-sec"><i></i><h3>'+esc(tv(id))+'</h3>'+pen('Edit title','t:'+id)+'</div>'}
   var top=P.filter(function(p){return p.key!=='uc'}),uc=P.filter(function(p){return p.key==='uc'});
   var h='';
@@ -532,6 +588,7 @@ function drawSite(){
      '<div class="s-hr"><span class="s-wl">0৳</span><span class="s-av"></span></div>'+
      '</div></div>';
   h+='<div class="s-wrap">'+
+     '<div class="ed s-notice"><span class="s-nl">🔔 নোটিশ</span><p>'+(tv('notice')?esc(tv('notice')):'<i>Notice bar is off. Tap the pen to add a message.</i>')+'</p>'+pen('Edit notice bar','t:notice')+'</div>'+
      '<div class="ed hero-ed"><section class="s-hero"><img id="sHeroImg" src="'+esc(bn[prevIdx].src)+'" alt="">'+
        '<div class="s-dots">'+bn.map(function(b,i){return '<i data-i="'+i+'" class="'+(i===prevIdx?'on':'')+'"></i>'}).join('')+'</div></section>'+
        pen('Edit banner','banners',true)+'</div>'+
@@ -539,6 +596,7 @@ function drawSite(){
         return '<div class="ed"><span class="s-q"><span class="s-ic">'+svgi(QICON[i],1)+'</span><b>'+esc(x.label)+'</b></span>'+pen('Edit '+QNAME[i],'q'+i)+'</div>';
      }).join('')+'</div>'+
      sec('sec1')+'<div class="s-grid">'+top.map(pc).join('')+'</div>'+
+     '<div style="margin:14px 0 4px"><button type="button" class="btn block" id="addProd">'+icon('plus','width:16px;height:16px')+'Add Product</button></div>'+
      sec('sec2')+'<div class="s-grid">'+uc.map(pc).join('')+'</div>'+
      '<div class="s-sec"><i></i><h3>POPUP</h3></div>'+
      '<div class="ed"><div class="s-pop"><img src="'+esc(I.pop.src||I.pop.def)+'" alt=""><p>'+esc(tv('pop')).replace(/\n/g,'<br>')+'</p><span class="pcl">CLOSE</span></div>'+pen('Edit popup','pop',true)+'</div>'+
@@ -562,6 +620,7 @@ function drawSite(){
     };
   });
   siteRoot.querySelectorAll('[data-prod]').forEach(function(cd){cd.onclick=function(){editProduct(cd.dataset.prod)}});
+  var addBtn=siteRoot.querySelector('#addProd');if(addBtn)addBtn.onclick=addProduct;
   siteRoot.querySelectorAll('.s-dots i').forEach(function(d){
     d.onclick=function(){
       prevIdx=parseInt(d.dataset.i,10);
@@ -724,6 +783,30 @@ function editPop(){
   });
 }
 
+function addProduct(){
+  openSheet('Add Product',function(b){
+    var d=sc(1,'plus','New product','Give it a name. Next you can add the picture, packages and prices.');
+    $('.sc-b',d).innerHTML=
+      '<label class="lb">Product name</label><input class="inp" id="npName" maxlength="80" placeholder="e.g. Free Fire Special">'+
+      '<div class="btns"><button type="button" class="btn sm" id="npGo">'+icon('plus','width:16px;height:16px')+'Create product</button></div>';
+    b.appendChild(d);
+    var inp=$('#npName',d),go=$('#npGo',d);
+    setTimeout(function(){inp.focus()},50);
+    async function create(){
+      var name=inp.value.trim();
+      if(!name){toast('Enter a product name','bad');return}
+      go.disabled=true;var old=go.innerHTML;go.innerHTML='<span class="spin"></span>';
+      try{
+        var r=await api('/api/admin/custom',{action:'add',name:name});
+        var key=r.newKey;state.cfg=r;drawSite();
+        toast('Product created. Now add the picture and packages','ok');
+        editProduct(key);
+      }catch(e){toast(e.message,'bad');go.disabled=false;go.innerHTML=old}
+    }
+    go.onclick=create;
+    inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();create()}};
+  });
+}
 function editProduct(key){
   openSheet('Edit: '+prodOf(key).name,function(b){drawProduct(b,key)});
 }
@@ -759,11 +842,11 @@ function drawProduct(b,key){
 
   /* 3. Packages & prices */
   if(p.hasGrid){
-    var pk=p.packages.map(function(x){return {label:x.label,name:x.name,price:x.price}});
+    var pk=p.packages.map(function(x){return {label:x.label,name:x.name,price:x.price,hidden:!!x.hidden,stockOut:!!x.stockOut,bcCode:x.bcCode||'',voucher:!!x.voucher}});
     var pb=sc(n++,'wal','Packages & prices','These show on the product page');
     var pbody=$('.sc-b',pb);b.appendChild(pb);
     var sync=function(){pbody.querySelectorAll('.pk-row').forEach(function(r,i){
-      pk[i].label=$('[data-f=label]',r).value;pk[i].name=$('[data-f=name]',r).value;pk[i].price=$('[data-f=price]',r).value})};
+      pk[i].label=$('[data-f=label]',r).value;pk[i].name=$('[data-f=name]',r).value;pk[i].price=$('[data-f=price]',r).value;pk[i].hidden=$('[data-f=hidden]',r).checked;pk[i].stockOut=$('[data-f=stockOut]',r).checked;pk[i].bcCode=$('[data-f=bcCode]',r).value;pk[i].voucher=$('[data-f=voucher]',r).checked})};
     var drawPk=function(){
       pbody.innerHTML='<div id="pkRows"></div>'+
         '<button type="button" class="btn ghost block" id="pkAdd">'+ic('plus')+'Add package</button>'+
@@ -778,8 +861,12 @@ function drawProduct(b,key){
             '<button type="button" class="ib del" data-a="del" '+(pk.length<=1?'disabled':'')+' aria-label="Delete">'+ic('trash')+'</button></div></div>'+
           '<label class="lb">Package name</label><input class="inp" data-f="label" placeholder="e.g. 100 Diamond" maxlength="140">'+
           '<div class="g2"><div><label class="lb">Price (BDT)</label><input class="inp" data-f="price" inputmode="decimal" placeholder="85"></div>'+
-          '<div><label class="lb">Order name <span class="opt">(optional)</span></label><input class="inp" data-f="name" placeholder="Same as name" maxlength="100"></div></div>';
-        $('[data-f=label]',r).value=x.label;$('[data-f=price]',r).value=x.price;$('[data-f=name]',r).value=(x.name&&x.name!==x.label)?x.name:'';
+          '<div><label class="lb">Order name <span class="opt">(optional)</span></label><input class="inp" data-f="name" placeholder="Same as name" maxlength="100"></div></div>'+
+          '<label class="lb">BC Topup item code <span class="opt">(Code package-এ লিখতেই হবে, যেমন 20uc)</span></label><input class="inp" data-f="bcCode" placeholder="e.g. 25pin" maxlength="60" autocapitalize="off" autocomplete="off">'+
+          '<label class="lb" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-f="voucher"> Code (Voucher) package — Player UID লাগে না, পেমেন্টের পর BC Topup থেকে কোড এনে গ্রাহককে দেখাবে</label>'+
+          '<label class="lb" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-f="hidden"> Hide from website (customers cannot see or buy)</label>'+
+          '<label class="lb" style="display:flex;gap:8px;align-items:center;margin-top:8px;color:#dc2626;font-weight:700"><input type="checkbox" data-f="stockOut"> STOCK OUT (red badge shows, customers cannot buy)</label>';
+        $('[data-f=label]',r).value=x.label;$('[data-f=price]',r).value=x.price;$('[data-f=name]',r).value=(x.name&&x.name!==x.label)?x.name:'';$('[data-f=hidden]',r).checked=!!x.hidden;$('[data-f=stockOut]',r).checked=!!x.stockOut;$('[data-f=bcCode]',r).value=x.bcCode||'';$('[data-f=voucher]',r).checked=!!x.voucher;
         $('[data-a=up]',r).onclick=function(){sync();var t=pk[i];pk[i]=pk[i-1];pk[i-1]=t;drawPk()};
         $('[data-a=down]',r).onclick=function(){sync();var t=pk[i];pk[i]=pk[i+1];pk[i+1]=t;drawPk()};
         $('[data-a=del]',r).onclick=function(){if(confirm('Delete this package?')){sync();pk.splice(i,1);drawPk()}};
@@ -796,7 +883,7 @@ function drawProduct(b,key){
           if(!pk[i].label.trim()){toast('Package '+(i+1)+': name is empty','bad');return}
           if(String(pk[i].price).trim()===''||!isFinite(Number(pk[i].price))||Number(pk[i].price)<0){toast('Package '+(i+1)+': enter a valid price','bad');return}
         }
-        patch({packages:pk.map(function(x){return {label:x.label.trim(),name:String(x.name||'').trim(),price:Number(x.price)}})});
+        patch({packages:pk.map(function(x){return {label:x.label.trim(),name:String(x.name||'').trim(),price:Number(x.price),hidden:!!x.hidden,stockOut:!!x.stockOut,bcCode:String(x.bcCode||'').trim(),voucher:!!x.voucher}})});
       };
       var rs=$('#pkRst',pbody);
       if(rs)rs.onclick=function(){if(confirm('Restore the default packages and prices?'))patch({packages:null})};
@@ -831,6 +918,30 @@ function drawProduct(b,key){
     drawRl();
   }
 
+  /* Delete a product made with "Add Product" */
+  if(p.isCustom){
+    var dz=sc(null,'trash','Delete this product','Removes it from the website for good','danger');
+    $('.sc-b',dz).innerHTML='<button type="button" class="btn danger block">'+ic('trash')+'Delete this product</button>';
+    $('button',dz).onclick=async function(){
+      if(!confirm('Delete "'+p.name+'" for good? Its picture and packages will be removed.'))return;
+      b.classList.add('busy');
+      try{state.cfg=await api('/api/admin/custom',{action:'delete',key:key});toast('Deleted','ok');closeSheet();drawSite()}
+      catch(e){toast(e.message,'bad');b.classList.remove('busy')}
+    };
+    b.appendChild(dz);
+  }
+  /* Hide / show the empty "New Product" placeholder card */
+  if(key==='np'){
+    var hz=sc(null,'eye','Show on website',p.hidden?'This card is hidden from customers':'Customers can see this card');
+    $('.sc-b',hz).innerHTML='<button type="button" class="btn block'+(p.hidden?'':' ghost')+'">'+(p.hidden?'Show this card again':'Hide this card from the website')+'</button>';
+    $('button',hz).onclick=async function(){
+      b.classList.add('busy');
+      try{state.cfg=await api('/api/admin/custom',{action:'hideNp',value:!p.hidden});toast('Saved, the website is updated','ok');refresh()}
+      catch(e){toast(e.message,'bad');b.classList.remove('busy')}
+    };
+    b.appendChild(hz);
+  }
+
   /* Reset everything */
   if(p.anyCustom){
     var z=sc(null,'undo','Reset this product','Removes all your changes for this product','danger');
@@ -843,6 +954,438 @@ function drawProduct(b,key){
     };
     b.appendChild(z);
   }
+}
+
+/* ---- Orders, Add Money, Users, Codes, Payment numbers ---- */
+function box(main){var d=document.createElement('div');d.className='xw';main.appendChild(d);return d}
+function when(t){try{return new Date(t).toLocaleString()}catch(e){return ''}}
+function chips(p,opts,cur,on){var c=document.createElement('div');c.className='xch';opts.forEach(function(o){var b=document.createElement('button');b.type='button';b.className='xc'+(o[0]===cur?' on':'');b.textContent=o[1];b.onclick=function(){on(o[0])};c.appendChild(b)});p.appendChild(c)}
+function card(p,h){var c=document.createElement('div');c.className='xr';c.innerHTML=h;p.appendChild(c);return c}
+function mini(l,cls,fn){var b=document.createElement('button');b.type='button';b.className='btn sm '+(cls||'');b.textContent=l;b.onclick=fn;return b}
+function act(btn,fn){btn.disabled=true;fn().catch(function(e){toast(e.message,'bad');btn.disabled=false})}
+function who(c){c=c||{};return esc(c.name||'')+' · '+esc(c.email||'')}
+
+function renderOrders(main){
+  var st='Pending',w=box(main);
+  async function load(){
+    w.innerHTML='';
+    chips(w,[['Pending','Pending'],['Completed','Done'],['Rejected','Rejected'],['','All']],st,function(v){st=v;load()});
+    var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/orders'+(st?'?status='+st:''));l.remove();
+      if(!r.orders.length)card(w,'<div class="xm">No orders</div>');
+      r.orders.forEach(function(o){
+        var c=card(w,'<div class="xt"><b>'+esc(o.packageName)+'</b><span>BDT '+esc(o.price)+'</span></div>'+
+          (o.uid?'<div class="xm">Player UID: <b>'+esc(o.uid)+'</b></div>':'<div class="xm"><b>Code package</b> (UID নেই)</div>')+'<div class="xm">'+who(o.customer)+'</div>'+
+          '<div class="xm">'+(o.payMethod==='wallet'?'Paid from wallet':'Instant '+esc(o.via)+' · '+esc(o.senderNumber)+' · TrxID '+esc(o.trxId))+(o.autoVerified?' (auto verified)':'')+'</div>'+
+          '<div class="xm">'+when(o.createdAt)+' · <b>'+esc(o.status)+'</b>'+(o.adminNote?' · '+esc(o.adminNote):'')+'</div>'+(o.bc&&o.bc.state?'<div class="xm">BC Topup: <b>'+esc(o.bc.state)+'</b>'+(o.bc.message?' · '+esc(o.bc.message):'')+'</div>':'')+(o.deliveredCode?'<div class="xm" style="white-space:pre-wrap">Sent to customer: '+esc(o.deliveredCode)+'</div>':''));
+        if(o.status!=='Pending')return;
+        c.insertAdjacentHTML('beforeend','<input class="inp xi" placeholder="Message / code for customer (optional)">');
+        var inp=c.querySelector('input'),bar=document.createElement('div');bar.className='xb';
+        var ok=mini('Deliver','',function(){act(ok,async function(){await api('/api/admin/orders/'+o._id+'/complete',{code:inp.value,note:''});toast('Delivered','ok');load()})});
+        var no=mini('Reject','danger',function(){if(!confirm('Reject this order?'+(o.payMethod==='wallet'?' The wallet money is refunded automatically.':'')))return;act(no,async function(){await api('/api/admin/orders/'+o._id+'/reject',{note:inp.value});toast('Rejected','ok');load()})});
+        bar.appendChild(ok);bar.appendChild(no);c.appendChild(bar);
+      });
+    }catch(e){l.textContent=e.message}
+  }
+  load();
+}
+
+function renderAddMoney(main){
+  var st='pending',w=box(main);
+  async function load(){
+    w.innerHTML='';
+    chips(w,[['pending','Pending'],['approved','Approved'],['rejected','Rejected'],['','All']],st,function(v){st=v;load()});
+    var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/addmoney'+(st?'?status='+st:''));l.remove();
+      if(!r.requests.length)card(w,'<div class="xm">No requests</div>');
+      r.requests.forEach(function(q){
+        var c=card(w,'<div class="xt"><b>BDT '+esc(q.amount)+' · '+esc(q.method)+'</b><span>'+esc(q.status)+'</span></div>'+
+          '<div class="xm">'+who(q.customer)+'</div><div class="xm">Sender '+esc(q.senderNumber)+' · TrxID <b>'+esc(q.trxId)+'</b></div><div class="xm">'+when(q.createdAt)+(q.autoVerified?' · auto verified':'')+'</div>');
+        if(q.status!=='pending')return;
+        var bar=document.createElement('div');bar.className='xb';
+        var ok=mini('Approve','',function(){if(!confirm('Add BDT '+q.amount+' to this wallet?'))return;act(ok,async function(){try{await api('/api/admin/addmoney/'+q._id+'/approve',{note:''})}catch(e){if(/ভুয়া|মিলছে না/.test(e.message)&&confirm(e.message+'\n\nতবুও নিজে Approve করে BDT '+q.amount+' যোগ করবেন?')){await api('/api/admin/addmoney/'+q._id+'/approve',{note:'',force:true})}else throw e}toast('Approved, money added','ok');load()})});
+        var no=mini('Reject','danger',function(){act(no,async function(){await api('/api/admin/addmoney/'+q._id+'/reject',{note:''});toast('Rejected','ok');load()})});
+        bar.appendChild(ok);bar.appendChild(no);c.appendChild(bar);
+      });
+    }catch(e){l.textContent=e.message}
+  }
+  load();
+}
+
+var TICK='<svg viewBox="0 0 24 24" style="width:17px;height:17px;vertical-align:-3px;margin-left:4px;flex-shrink:0"><path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91C2.63 9.33 1.75 10.57 1.75 12s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><polygon fill="#fff" points="9.65 16.4 5.8 12.55 7.2 11.15 9.65 13.6 16.8 6.45 18.2 7.85"/></svg>';
+function bdt(n){return 'BDT '+Number(n||0).toLocaleString('en-US')}
+
+function renderDash(main){
+  var w=box(main);
+  (async function(){
+    var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/dashboard');l.remove();
+      function cell(k,v,sub){return '<div style="background:#f5f8ff;border-radius:12px;padding:10px 12px"><div class="xm">'+k+'</div><b style="font-size:18px">'+v+'</b>'+(sub?'<div class="xm">'+sub+'</div>':'')+'</div>'}
+      function grid(cells){return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'+cells.join('')+'</div>'}
+      card(w,'<b>Sales (completed orders)</b>'+grid([
+        cell('Today',bdt(r.revenue.today)),cell('This month',bdt(r.revenue.month)),
+        cell('All time',bdt(r.revenue.all)),cell('Users money added',bdt(r.totalAdded))
+      ]));
+      card(w,'<b>Orders</b>'+grid([
+        cell('Pending',esc(r.orders.pending)),cell('Completed',esc(r.orders.completed)),
+        cell('Rejected',esc(r.orders.rejected)),cell('Total',esc(r.orders.total))
+      ]));
+      card(w,'<b>Users</b>'+grid([
+        cell('Total users',esc(r.users.total)),cell('New today',esc(r.users.today)),
+        cell('New this month',esc(r.users.month)),cell('Verified tick',esc(r.users.verified))
+      ]));
+      card(w,'<b>Wallet &amp; payments</b>'+grid([
+        cell('All users wallet',bdt(r.walletTotal)),cell('Add-money pending',esc(r.pendingAddMoney)),
+        cell('SMS waiting (unused)',esc(r.smsWaiting))
+      ]));
+      var mx=Math.max.apply(null,r.days.map(function(d){return d.total}).concat([1]));
+      var bars=r.days.map(function(d){
+        var h=Math.max(4,Math.round(d.total/mx*90));
+        return '<div style="flex:1;text-align:center;min-width:0"><div class="xm" style="font-size:10px">'+(d.total?d.total:'')+'</div><div style="height:'+h+'px;background:#2563eb;border-radius:6px 6px 0 0;margin:2px 3px 0"></div><div class="xm" style="font-size:10px">'+esc(d.date.slice(5))+'</div></div>';
+      }).join('');
+      card(w,'<b>Last 7 days sales</b><div style="display:flex;align-items:flex-end;gap:2px;height:130px;margin-top:10px">'+bars+'</div>');
+      var t=card(w,'<b>Top spenders</b>');
+      if(!r.top.length)t.insertAdjacentHTML('beforeend','<div class="xm">No orders yet</div>');
+      r.top.forEach(function(u,i){
+        t.insertAdjacentHTML('beforeend','<div class="xt" style="margin-top:8px"><span style="display:flex;align-items:center;min-width:0"><b>'+(i+1)+'. '+esc(u.name||u.email||u.id)+'</b>'+(u.verified?TICK:'')+'</span><span>'+bdt(u.spent)+'</span></div><div class="xm">'+esc(u.email)+' · '+esc(u.orders)+' order(s)</div>');
+      });
+      var all=mini('All users, spending & tick','',function(){show('users')});
+      t.appendChild(all);
+    }catch(e){l.textContent=e.message}
+  })();
+}
+
+function renderUsers(main){
+  var w=box(main),t,sort='new';
+  w.innerHTML='<input class="inp" placeholder="Search name or email">';
+  var inp=w.querySelector('input'),chipBox=document.createElement('div'),list=document.createElement('div');list.className='xw';
+  w.appendChild(chipBox);w.appendChild(list);
+  async function load(){
+    chipBox.innerHTML='';
+    chips(chipBox,[['new','Newest'],['spent','Top spender']],sort,function(v){sort=v;load()});
+    list.innerHTML='';var l=card(list,'Loading...');
+    try{
+      var r=await api('/api/admin/users?q='+encodeURIComponent(inp.value.trim())+'&sort='+sort);l.remove();
+      card(list,'<div class="xm">'+r.total+' user(s)'+(r.total>r.users.length?', showing '+r.users.length+' (use search)':'')+'</div>');
+      r.users.forEach(function(u){
+        var c=card(list,'<div class="xt"><span style="display:flex;align-items:center;min-width:0"><b>'+esc(u.name)+'</b>'+(u.verified?TICK:'')+'</span><span>Wallet '+bdt(u.balance)+'</span></div><div class="xm">'+esc(u.email)+(u.phone?' · '+esc(u.phone):'')+'</div><div class="xm">Spent: <b>'+bdt(u.spent)+'</b> · Orders: '+esc(u.orders)+' · joined '+when(u.createdAt)+'</div>');
+        var bar=document.createElement('div');bar.className='xb';
+        function adj(action){
+          var a=prompt((action==='add'?'Add how much (BDT) to ':'Deduct how much (BDT) from ')+u.name+'?');if(!a)return;
+          var body={amount:a,action:action};
+          if(action==='add'){var tx=prompt('পেমেন্ট SMS-এর আসল TrxID দিন (যেমন 76BV9PS1):');if(!tx)return;body.trxId=tx.trim()}
+          else{body.note=prompt('কেন কাটছেন? (কারণ লিখুন):')||''}
+          api('/api/admin/users/'+u.id+'/balance',body).then(function(r){toast('New balance: BDT '+r.balance,'ok');load()}).catch(function(e){toast(e.message,'bad')});
+        }
+        bar.appendChild(mini('Add balance','',function(){adj('add')}));bar.appendChild(mini('Deduct','danger',function(){adj('subtract')}));
+        var tk=mini(u.verified?'Remove tick':'Give tick','',function(){act(tk,async function(){
+          await api('/api/admin/users/'+u.id+'/verify',{verified:!u.verified});toast(u.verified?'Tick removed':'Verified tick given','ok');load();
+        })});
+        bar.appendChild(tk);c.appendChild(bar);
+      });
+    }catch(e){l.textContent=e.message}
+  }
+  inp.oninput=function(){clearTimeout(t);t=setTimeout(load,350)};
+  load();
+}
+
+function renderContact(main){
+  var w=box(main),c=(state.cfg.contact&&state.cfg.contact.value)||{},t=c.ticks||{};
+  function fld(lb,k,v,mode,ph){return '<label class="lb">'+lb+'</label><input class="inp" data-f="'+k+'" inputmode="'+mode+'" placeholder="'+esc(ph||'')+'" value="'+esc(v||'')+'">'}
+  function tick(lb,k,on){return '<label class="lb" style="display:flex;gap:8px;align-items:center;margin-top:6px;font-weight:700"><input type="checkbox" data-t="'+k+'"'+(on?' checked':'')+'> '+lb+' '+TICK+'</label>'}
+  var f=card(w,'<b>Contact page (হোমপেজের নিচে)</b><div class="xm">কোনো ঘর খালি রাখলে ওই কার্ড হোমপেজে দেখাবে না। টিক বক্সে দাগ দিলে নামের পাশে টিক চিহ্ন দেখাবে।</div>'+
+    fld('WhatsApp number','wa',c.wa,'tel','01XXXXXXXXX')+tick('WhatsApp-এ টিক','wa',t.wa)+
+    fld('Telegram username (@ ছাড়া)','tgUser',c.tgUser,'text','Ronimalik22')+fld('Telegram-এর পাশে দেখানো ফোন নাম্বার (ঐচ্ছিক)','tgPhone',c.tgPhone,'tel','')+tick('Telegram-এ টিক','tg',t.tg)+
+    fld('Messenger লিংক (ঐচ্ছিক)','messenger',c.messenger,'url','https://m.me/yourpage')+tick('Messenger-এ টিক','messenger',t.messenger)+
+    fld('Email','email',c.email,'email','')+tick('ইমেইলে টিক','email',t.email)+
+    '<div class="xm" style="margin-top:10px">নিচের "Telegram HelpLine" বাটন (লিংক আসে Site Editor-এর Telegram বাটন থেকে)</div>'+tick('Telegram HelpLine-এ টিক','help',t.help));
+  var bar=document.createElement('div');bar.className='xb';
+  var sv=mini('Save','',function(){act(sv,async function(){
+    var o={ticks:{}};
+    f.querySelectorAll('input[data-f]').forEach(function(i){o[i.dataset.f]=i.value.trim()});
+    f.querySelectorAll('input[data-t]').forEach(function(i){o.ticks[i.dataset.t]=i.checked});
+    state.cfg=await api('/api/admin/contact',{contact:o});toast('Saved, the website is updated','ok');sv.disabled=false;
+  })});
+  var rs=mini('Reset','danger',function(){if(!confirm('আগের ডিফল্ট তথ্যে ফিরে যাবেন?'))return;act(rs,async function(){
+    state.cfg=await api('/api/admin/reset',{kind:'contact'});toast('Restored to default','ok');show('contact');
+  })});
+  bar.appendChild(sv);bar.appendChild(rs);f.appendChild(bar);
+}
+
+function renderSms(main){
+  var w=box(main);
+  async function load(){
+    w.innerHTML='';var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/sms');l.remove();
+      var url='https://'+(r.host||'YOUR-SITE')+'/api/sms/incoming?s='+(r.secret||'SECRET');
+      var c=card(w,'<b>Phone SMS forward (MacroDroid / SMS Forwarder)</b>'+
+        '<div class="xm">ফোনের অ্যাপে এই URL বসান (POST)। bKash/Nagad/Rocket-এর টাকা পাওয়ার SMS এলে ওয়েবসাইটে অটো টাকা যোগ হবে।</div>'+
+        '<label class="lb">Webhook URL</label><input class="inp" id="smu" readonly value="'+esc(url)+'">'+
+        '<label class="lb">Secret'+(r.fromEnv?' (এখন Render থেকে নেওয়া হচ্ছে)':'')+'</label><input class="inp" id="sms" maxlength="64" value="'+esc(r.secret||'')+'">');
+      var bar=document.createElement('div');bar.className='xb';
+      var sv=mini('Save secret','',function(){act(sv,async function(){await api('/api/admin/sms',{secret:c.querySelector('#sms').value});toast('Saved. ফোনের অ্যাপে নতুন URL দিন','ok');load()})});
+      var gen=mini('Generate new','',function(){if(!confirm('নতুন সিক্রেট বানালে ফোনের অ্যাপে URL বদলাতে হবে। চালিয়ে যাবেন?'))return;act(gen,async function(){await api('/api/admin/sms',{generate:true});toast('New secret created','ok');load()})});
+      var cp=mini('Copy URL','',function(){var i=c.querySelector('#smu');i.select();try{document.execCommand('copy');toast('Copied','ok')}catch(e){toast('Copy করা যায়নি, চেপে ধরে কপি করুন','bad')}});
+      bar.appendChild(sv);bar.appendChild(gen);bar.appendChild(cp);c.appendChild(bar);
+      var h=card(w,'<b>Last 20 SMS received</b>');
+      if(!r.recent.length)h.insertAdjacentHTML('beforeend','<div class="xm">এখনো কোনো পেমেন্ট SMS আসেনি</div>');
+      r.recent.forEach(function(x){
+        h.insertAdjacentHTML('beforeend','<div class="xt" style="margin-top:8px"><b>'+bdt(x.amount)+' · '+esc(x.method)+'</b><span>'+(x.used?'Used':'Waiting')+'</span></div><div class="xm">TrxID <b>'+esc(x.trxId)+'</b>'+(x.sender?' · '+esc(x.sender):'')+(x.at?' · '+when(x.at):'')+'</div>');
+      });
+    }catch(e){card(w,esc(e.message))}
+  }
+  load();
+}
+
+function renderInvest(main){
+  var w=box(main);
+  async function load(){
+    w.innerHTML='';var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/users/totals');l.remove();
+      card(w,'<div class="xt"><b>Total added</b><span>BDT '+esc(r.totalAdded)+'</span></div><div class="xm">Orders total: BDT '+esc(r.totalSpent)+' · Redeem codes: BDT '+esc(r.totalCodes)+'</div>');
+      if(!r.users.length)card(w,'<div class="xm">No data yet</div>');
+      r.users.forEach(function(u){
+        card(w,'<div class="xt"><b>'+esc(u.name||u.id)+'</b><span>BDT '+esc(u.net)+'</span></div><div class="xm">'+esc(u.email||'')+'</div><div class="xm">Orders: BDT '+esc(u.spent)+' ('+esc(u.orders)+') · Code: BDT '+esc(u.codes)+(u.cut?' · Deducted: BDT '+esc(u.cut):'')+(u.last?' · last '+when(u.last):'')+'</div>');
+      });
+    }catch(e){l.textContent=e.message}
+  }
+  load();
+}
+
+function renderCodes(main){
+  var w=box(main);
+  async function load(){
+    w.innerHTML='';
+    var f=card(w,'<b>Create redeem codes</b><input class="inp" id="ca" inputmode="decimal" placeholder="Amount (BDT) for each code"><input class="inp" id="cn" inputmode="numeric" placeholder="How many codes (1-100)" value="1">');
+    var out=document.createElement('textarea');out.className='xcode hidden';out.readOnly=true;
+    var go=mini('Generate','',function(){act(go,async function(){
+      var r=await api('/api/admin/codes',{amount:f.querySelector('#ca').value,count:f.querySelector('#cn').value});
+      toast(r.codes.length+' code(s) created','ok');out.value=r.codes.join('\n');out.classList.remove('hidden');go.disabled=false;
+    })});
+    f.appendChild(go);f.appendChild(out);
+    var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/codes');l.remove();
+      card(w,'<b>Recent codes</b>');
+      r.codes.forEach(function(c){card(w,'<div class="xt"><b style="font-family:ui-monospace,monospace">'+esc(c.code)+'</b><span>BDT '+esc(c.amount)+'</span></div><div class="xm">'+(c.usedBy?'Used '+when(c.usedAt):'Not used yet')+'</div>')});
+    }catch(e){l.textContent=e.message}
+  }
+  load();
+}
+
+function renderPayment(main){
+  var w=box(main);
+  (async function(){
+    try{
+      var r=await api('/api/admin/payment'),p=r.payment||{};
+      var c=card(w,'<b>Payment numbers shown to customers</b><div class="xm">Leave a box empty to hide that method number.</div>'+
+        [['bkash','bKash'],['nagad','Nagad'],['rocket','Rocket']].map(function(m){return '<label class="lb">'+m[1]+'</label><input class="inp" data-k="'+m[0]+'" inputmode="tel" maxlength="20" value="'+esc(p[m[0]]||'')+'">'}).join(''));
+      var sv=mini('Save numbers','',function(){act(sv,async function(){
+        var b={};c.querySelectorAll('input').forEach(function(i){b[i.dataset.k]=i.value});
+        await api('/api/admin/payment',b);toast('Saved, customers see the new numbers','ok');sv.disabled=false;
+      })});
+      c.appendChild(sv);
+    }catch(e){card(w,esc(e.message))}
+  })();
+}
+
+
+function copyText(t){
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(t).then(function(){toast('Copied','ok')},function(){toast('Copy করা যায়নি','bad')});
+    var i=document.createElement('textarea');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove();toast('Copied','ok');
+  }catch(e){toast('Copy করা যায়নি','bad')}
+}
+
+function renderEnv(main){
+  var w=box(main);
+  async function load(){
+    w.innerHTML='';var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/envvars');l.remove();
+      if(!r.available)card(w,'<b style="color:var(--err)">MongoDB এখনো সংযুক্ত নয়</b><div class="xm">সংযুক্ত না হওয়া পর্যন্ত এখানে সেভ হবে না। কিছুক্ষণ পরে পেজ রিফ্রেশ করুন।</div>');
+      var c=card(w,'<b>Keys &amp; secrets</b><div class="xm">এখানে বদলালে সঙ্গে সঙ্গে কাজ করে, Render-এ যেতে হবে না। ঘর ফাঁকা রাখলে আগের মান থাকবে। গোপন key পুরো দেখা যায় না, শুধু শেষ ৪ অক্ষর।</div>'+
+        r.catalog.filter(function(f){return !f.group}).map(function(f){
+          var src=f.source==='admin'?' · admin থেকে':(f.source==='render'?' · Render থেকে':' · সেট নেই');
+          return '<label class="lb">'+esc(f.label)+'<span style="font-weight:400;color:var(--mu)">'+src+'</span></label><input class="inp" data-k="'+esc(f.name)+'" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="'+esc(f.hint||f.name)+'" value="'+esc(f.value||'')+'">'
+            +(f.source==='admin'?'<div class="xb"><button type="button" class="btn sm danger" data-rm="'+esc(f.name)+'">Render-এর মানে ফিরে যান</button></div>':'');
+        }).join(''));
+      c.querySelectorAll('[data-rm]').forEach(function(b){b.onclick=function(){if(!confirm('Admin-এর মান মুছে Render-এর মান ফিরে আসবে। চালিয়ে যাবেন?'))return;act(b,async function(){await api('/api/admin/envvars',{remove:[b.dataset.rm]});toast('Done','ok');load()})}});
+      var sv=mini('Save','',function(){act(sv,async function(){
+        var s={};c.querySelectorAll('input[data-k]').forEach(function(i){if(i.value.trim())s[i.dataset.k]=i.value});
+        await api('/api/admin/envvars',{set:s});toast('Saved','ok');load();
+      })});
+      c.appendChild(sv);
+
+      var cu=card(w,'<b>Custom variable</b><div class="xm">যেকোনো Environment নাম আর মান যোগ করুন (যেমন অন্য কোনো API key)। নাম অবশ্যই সার্ভারের কোড যে নামে পড়ে সেটাই দিতে হবে।</div>'+
+        '<label class="lb">Name</label><input class="inp" id="cvn" placeholder="MY_API_KEY" autocapitalize="characters" autocomplete="off">'+
+        '<label class="lb">Value</label><input class="inp" id="cvv" autocomplete="off" autocapitalize="off">');
+      var add=mini('Add / update','',function(){act(add,async function(){
+        var n=cu.querySelector('#cvn').value.trim(),v=cu.querySelector('#cvv').value.trim();
+        if(!n||!v)throw new Error('নাম আর মান দুটোই দিন');
+        var o={};o[n]=v;await api('/api/admin/envvars',{set:o});toast('Saved','ok');load();
+      })});cu.appendChild(add);
+      r.custom.forEach(function(x){
+        var row=card(w,'<div class="xt"><b>'+esc(x.name)+'</b><span>'+esc(x.hint)+'</span></div>');
+        var d=mini('Remove','danger',function(){if(!confirm(x.name+' মুছবেন?'))return;act(d,async function(){await api('/api/admin/envvars',{remove:[x.name]});toast('Removed','ok');load()})});
+        row.appendChild(d);
+      });
+
+      var pw=card(w,'<b>Admin password</b><div class="xm">'+(r.passwordFromAdmin?'এখন admin থেকে সেট করা পাসওয়ার্ড চলছে।':'এখন Render-এর FFX-PASS চলছে।')+' নতুন পাসওয়ার্ড ৮+ অক্ষর, স্পেস ছাড়া। ভুলে গেলে MongoDB-র ffx_kv কালেকশন থেকে envvars ডকুমেন্ট মুছে ফেলতে হবে।</div>'+
+        '<label class="lb">বর্তমান পাসওয়ার্ড</label><input class="inp" id="pwc" type="password" autocomplete="current-password">'+
+        '<label class="lb">নতুন পাসওয়ার্ড</label><input class="inp" id="pwn" type="password" autocomplete="new-password">'+
+        '<label class="lb">নতুন পাসওয়ার্ড আবার</label><input class="inp" id="pwn2" type="password" autocomplete="new-password">');
+      var pb=mini('Change password','',function(){act(pb,async function(){
+        var a=pw.querySelector('#pwc').value,b=pw.querySelector('#pwn').value;
+        if(b!==pw.querySelector('#pwn2').value)throw new Error('নতুন পাসওয়ার্ড দুই ঘরে মিলছে না');
+        var j=await api('/api/admin/password',{current:a,next:b});
+        state.token=j.token;saveToken(j.token,j.expires);toast('পাসওয়ার্ড বদলেছে','ok');pb.disabled=false;
+        ['#pwc','#pwn','#pwn2'].forEach(function(q){pw.querySelector(q).value=''});
+      })});pw.appendChild(pb);
+
+      var rs=card(w,'<b>Server restart</b><div class="xm">অধিকাংশ বদল সঙ্গে সঙ্গে কাজ করে। কোনো সার্ভিস স্টার্টের সময়ই key পড়ে নিলে (যেমন বট) রিস্টার্ট দিন। ২০–৩০ সেকেন্ডে সাইট আবার চালু হবে।</div>');
+      var rb=mini('Restart server','danger',function(){if(!confirm('সার্ভার রিস্টার্ট হবে। চালিয়ে যাবেন?'))return;act(rb,async function(){await api('/api/admin/restart',{});toast('রিস্টার্ট হচ্ছে...','ok');setTimeout(function(){rb.disabled=false},8000)})});
+      rs.appendChild(rb);
+
+      card(w,'<b>Render-এই থাকবে (এখানে আনা যায় না)</b><div class="xm">'+r.locked.map(esc).join(' · ')+'<br>এগুলো সার্ভার চালু হওয়ার আগেই লাগে (ডাটাবেজ/GitHub সংযোগ), তাই MongoDB-র ভেতরে রাখা অসম্ভব।</div>');
+    }catch(e){card(w,esc(e.message))}
+  }
+  load();
+}
+
+function renderBc(main){
+  var w=box(main);
+  var NAMES=['BCTOPUP_RESELLER_ID','BCTOPUP_API_KEY','BCTOPUP_CALLBACK_SECRET','BCTOPUP_TEST_UIDS','BCTOPUP_ENABLED'];
+  function rnd(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).getRandomValues(a);return Array.prototype.map.call(a,function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+  async function load(){
+    w.innerHTML='';var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/envvars');l.remove();
+      var F={};r.catalog.forEach(function(f){F[f.name]=f});
+      var on=(F.BCTOPUP_ENABLED.value||'').toLowerCase();on=on==='true'||on==='1'||on==='yes'||on==='on';
+      if(!r.available)card(w,'<b style="color:var(--err)">MongoDB এখনো সংযুক্ত নয়</b><div class="xm">সংযুক্ত না হওয়া পর্যন্ত সেভ হবে না। কিছুক্ষণ পরে রিফ্রেশ করুন।</div>');
+      function ck(ok,t){return '<div class="xm" style="color:'+(ok?'var(--ok)':'var(--err)')+'">'+(ok?'✓ ':'✗ ')+t+'</div>'}
+      card(w,'<b>BC Topup status</b>'+ck(F.BCTOPUP_RESELLER_ID.set,'Reseller ID')+ck(F.BCTOPUP_API_KEY.set,'API Key')+ck(F.BCTOPUP_CALLBACK_SECRET.set,'Callback secret')+ck(on,'Auto top-up চালু'));
+      var c=card(w,'<b>BC Topup settings</b><div class="xm">BC Topup → API Management থেকে Reseller ID আর API Key এনে এখানে বসান। ঘর ফাঁকা রাখলে আগের মান থাকবে। এগুলো MongoDB-তে সেভ হয়, কোনো ফাইলে লেখা হয় না।</div>'+
+        '<label class="lb">Reseller ID'+(F.BCTOPUP_RESELLER_ID.set?' ✓':'')+'</label><input class="inp" data-k="BCTOPUP_RESELLER_ID" autocomplete="off" autocapitalize="characters" spellcheck="false" value="'+esc(F.BCTOPUP_RESELLER_ID.value||'')+'">'+
+        '<label class="lb">API Key'+(F.BCTOPUP_API_KEY.set?' ✓ ('+esc(F.BCTOPUP_API_KEY.hint)+')':'')+'</label><input class="inp" data-k="BCTOPUP_API_KEY" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="'+(F.BCTOPUP_API_KEY.set?'নতুন key দিলে বদলাবে':'')+'">'+
+        '<label class="lb">Callback secret'+(F.BCTOPUP_CALLBACK_SECRET.set?' ✓':'')+'</label><input class="inp" data-k="BCTOPUP_CALLBACK_SECRET" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(F.BCTOPUP_CALLBACK_SECRET.value||'')+'">'+
+        '<div class="xm">নিজের তৈরি যেকোনো লম্বা গোপন লেখা। না জানলে নিচের Generate চাপুন। BC Topup-এ আলাদা করে কিছু বসাতে হয় না, প্রতিটা অর্ডারের সঙ্গে সাইট নিজেই পাঠায়।</div>'+
+        '<label class="lb">Test UID (ঐচ্ছিক, কমা দিয়ে)</label><input class="inp" data-k="BCTOPUP_TEST_UIDS" inputmode="numeric" autocomplete="off" value="'+esc(F.BCTOPUP_TEST_UIDS.value||'')+'">'+
+        '<div class="xm">দিলে শুধু এই UID-এর অর্ডার অটো যাবে, বাকিগুলো ম্যানুয়াল থাকবে। প্রথমে নিজের UID দিয়ে টেস্ট করুন, পরে ফাঁকা করতে নিচের Clear Test UID চাপুন।</div>'+
+        '<label class="lb" style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:700"><input type="checkbox" id="bcOn"'+(on?' checked':'')+'> অটো টপ-আপ চালু</label>');
+      var bar=document.createElement('div');bar.className='xb';
+      var gen=mini('Generate secret','',function(){c.querySelector('[data-k=BCTOPUP_CALLBACK_SECRET]').value=rnd();toast('Save চাপতে ভুলবেন না','ok')});
+      var sv=mini('Save','',function(){act(sv,async function(){
+        var s={};c.querySelectorAll('input[data-k]').forEach(function(i){if(i.value.trim())s[i.dataset.k]=i.value.trim()});
+        s.BCTOPUP_ENABLED=c.querySelector('#bcOn').checked?'true':'false';
+        await api('/api/admin/envvars',{set:s});toast('Saved','ok');load();
+      })});
+      bar.appendChild(sv);bar.appendChild(gen);c.appendChild(bar);
+      var bar2=document.createElement('div');bar2.className='xb';
+      if(F.BCTOPUP_TEST_UIDS.set){var ct=mini('Clear Test UID','',function(){act(ct,async function(){await api('/api/admin/envvars',{remove:['BCTOPUP_TEST_UIDS']});toast('Cleared','ok');load()})});bar2.appendChild(ct)}
+      var cl=mini('Clear all BC Topup settings','danger',function(){if(!confirm('BC Topup-এর সব সেটিং মুছে যাবে এবং অটো টপ-আপ বন্ধ হবে। নিশ্চিত?'))return;act(cl,async function(){await api('/api/admin/envvars',{remove:NAMES});toast('Cleared','ok');load()})});
+      bar2.appendChild(cl);c.appendChild(bar2);
+      if(F.BCTOPUP_CALLBACK_SECRET.value){
+        var url=location.origin+'/api/bctopup/callback?s='+F.BCTOPUP_CALLBACK_SECRET.value;
+        var u=card(w,'<b>Callback URL (শুধু দেখার জন্য)</b><div class="xm" style="word-break:break-all">'+esc(url)+'</div>');
+        u.appendChild(mini('Copy URL','',function(){copyText(url)}));
+      }
+      card(w,'<div class="xm">নতুন Reseller ID/API Key নিলে পুরনোটা আর কাজ করবে না। সাইটে অটো যাওয়ার জন্য প্রতিটা প্যাকেজে BC Topup item code থাকতে হবে, আর সাইটের ঠিকানা (PUBLIC_URL) সেট থাকতে হবে।</div>');
+    }catch(e){card(w,esc(e.message))}
+  }
+  load();
+}
+
+function renderSiteText(main){
+  var w=box(main),term='',skip=0;
+  var top=card(w,'<b>Website text (যেকোনো লেখা বদলান)</b><div class="xm">হোমপেজের যেকোনো লেখা খুঁজে চাপুন, নতুন লেখা বসান। ফাঁকা রেখে Save দিলে আগের লেখা ফিরে আসবে। English বাটনে ওই লেখার ইংরেজি অনুবাদ আসবে না, আপনার লেখাই দেখাবে।</div><input class="inp" id="stq" placeholder="খুঁজুন..." style="margin-top:8px">');
+  var box2=document.createElement('div');w.appendChild(box2);
+  var tmr;top.querySelector('#stq').oninput=function(){var v=this.value;clearTimeout(tmr);tmr=setTimeout(function(){term=v;skip=0;load()},300)};
+  async function load(){
+    box2.innerHTML='';var l=card(box2,'Loading...');
+    try{
+      var r=await api('/api/admin/sitetext?q='+encodeURIComponent(term)+'&skip='+skip);l.remove();
+      box2.insertAdjacentHTML('beforeend','<div class="xm" style="margin:6px 4px">মোট '+esc(r.total)+' টা লেখা · বদলানো '+esc(r.changed)+' টা</div>');
+      r.items.forEach(function(it){
+        var c=card(box2,'<div class="xm" style="color:var(--tx);font-weight:600;word-break:break-word">'+esc(it.text)+'</div>'+(it.to?'<div class="xm" style="color:var(--ok);word-break:break-word">→ '+esc(it.to)+'</div>':''));
+        c.style.cursor='pointer';
+        c.onclick=function(){openSheet('Edit text',function(b){
+          var o=document.createElement('div');o.className='xm';o.style.marginBottom='8px';o.textContent='আসল: '+it.text;b.appendChild(o);
+          var ta=document.createElement('textarea');ta.className='inp';ta.style.cssText='height:120px;padding:10px';ta.value=it.to||it.text;b.appendChild(ta);
+          var sv=mini('Save','',function(){act(sv,async function(){await api('/api/admin/sitetext',{from:it.id,to:ta.value.trim()===it.text?'':ta.value});toast('Saved, সাইটে আপডেট হয়েছে','ok');closeSheet();load()})});
+          b.appendChild(sv);
+          if(it.to){var rs=mini('Restore original','danger',function(){act(rs,async function(){await api('/api/admin/sitetext',{from:it.id,to:''});toast('Restored','ok');closeSheet();load()})});b.appendChild(rs)}
+        })};
+      });
+      var pg=document.createElement('div');pg.className='xb';
+      if(skip>0)pg.appendChild(mini('← Prev','',function(){skip=Math.max(skip-40,0);load()}));
+      if(skip+40<r.total)pg.appendChild(mini('Next →','',function(){skip+=40;load()}));
+      box2.appendChild(pg);
+    }catch(e){card(box2,esc(e.message))}
+  }
+  load();
+}
+
+function renderDb(main){
+  var w=box(main),PAGE=20;
+  function download(name,obj){
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));
+    a.download=name+'-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();
+  }
+  async function list(){
+    w.innerHTML='';var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/db/collections');l.remove();
+      card(w,'<b>Database</b><div class="xm">কোনো collection চাপলে ভেতরের ডাটা দেখা, এডিট, ডিলিট বা backup নেওয়া যাবে। ডিলিট ফেরানো যায় না, আগে Backup নিয়ে রাখুন।</div>');
+      r.collections.forEach(function(c){
+        var x=card(w,'<div class="xt"><b>'+esc(c.name)+'</b><span>'+esc(c.count)+' docs</span></div>');
+        x.style.cursor='pointer';x.onclick=function(){docs(c.name,0)};
+      });
+    }catch(e){card(w,esc(e.message))}
+  }
+  async function docs(name,skip){
+    w.innerHTML='';var l=card(w,'Loading...');
+    try{
+      var r=await api('/api/admin/db/docs?c='+encodeURIComponent(name)+'&skip='+skip+'&limit='+PAGE);l.remove();
+      var top=card(w,'<div class="xt"><b>'+esc(name)+'</b><span>'+esc(r.total)+' docs</span></div>');
+      var bar=document.createElement('div');bar.className='xb';
+      bar.appendChild(mini('← Collections','',list));
+      var bk=mini('Backup (JSON)','',function(){act(bk,async function(){var d=await api('/api/admin/db/export?c='+encodeURIComponent(name));download(name,d);bk.disabled=false})});
+      bar.appendChild(bk);top.appendChild(bar);
+      if(!r.docs.length)card(w,'<div class="xm">কোনো ডকুমেন্ট নেই</div>');
+      r.docs.forEach(function(d){
+        var txt=JSON.stringify(d,null,1),id=d._id;
+        var c=card(w,'<div class="xm" style="word-break:break-all;white-space:pre-wrap;max-height:160px;overflow:auto;font-family:monospace;font-size:11.5px">'+esc(txt.length>1500?txt.slice(0,1500)+'\n…':txt)+'</div>');
+        var b2=document.createElement('div');b2.className='xb';
+        b2.appendChild(mini('Edit','',function(){edit(name,id,d,skip)}));
+        var del=mini('Delete','danger',function(){if(!confirm('এই ডকুমেন্ট চিরতরে মুছে যাবে। নিশ্চিত?'))return;act(del,async function(){await api('/api/admin/db/delete',{c:name,id:id});toast('Deleted','ok');docs(name,skip)})});
+        b2.appendChild(del);c.appendChild(b2);
+      });
+      var pg=document.createElement('div');pg.className='xb';
+      if(skip>0)pg.appendChild(mini('← Newer','',function(){docs(name,Math.max(skip-PAGE,0))}));
+      if(skip+PAGE<r.total)pg.appendChild(mini('Older →','',function(){docs(name,skip+PAGE)}));
+      w.appendChild(pg);
+    }catch(e){card(w,esc(e.message))}
+  }
+  function edit(name,id,d,skip){
+    var o=Object.assign({},d);delete o._id;
+    openSheet('Edit document',function(b){
+      var ta=document.createElement('textarea');ta.className='inp';ta.style.cssText='height:280px;padding:10px;font-family:monospace;font-size:12px';ta.value=JSON.stringify(o,null,2);
+      b.appendChild(ta);
+      var sv=mini('Save','',function(){act(sv,async function(){
+        var doc;try{doc=JSON.parse(ta.value)}catch(e){throw new Error('JSON ঠিক নেই: '+e.message)}
+        await api('/api/admin/db/update',{c:name,id:id,doc:doc});toast('Saved','ok');closeSheet();docs(name,skip);
+      })});
+      b.appendChild(sv);
+    });
+  }
+  list();
 }
 
 (async function(){
