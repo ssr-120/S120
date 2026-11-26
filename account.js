@@ -1,26 +1,26 @@
 // =======================================================
-// WEBSITE NAME (Darkest top up)
+// WEBSITE NAME (NICKNAME)
 // =======================================================
-var website_name = "Darkest top up";
+var website_name = "FF Diamond BD";
 
 // =======================================================
 // TELEGRAM CHANNEL LINK
 // =======================================================
-var telegram_channel_link = "telegram channel link";
+var telegram_channel_link = "@Ronimalik22";
 
 // =======================================================
 // TELEGRAM GROUP LINK
 // =======================================================
-var telegram_group_link = "telegram group link";
+var telegram_group_link = "https://t.me/+DlYKjrvkRQk4OTll";
 
 // =======================================================
 // YOUTUBE CHANNEL LINK
 // =======================================================
-var youtube_channel_link = "YouTube channel link";
+var youtube_channel_link = "@Roni.Malik18";
 
 // =======================================================
 // NOTIFICATION TEXT
 // =======================================================
-var notification_text = ` সবথেকে কম দামে টপ করার জন্য সেরা ওয়েবসাইট
+var notification_text = `সবথেকে কম দামে টপ করার জন্য সেরা ওয়েবসাইট
 ১০০% বিশ্বস্ত ও দ্রুত ডেলিভারিতে
-অর্ডার করুন নিশ্চিন্তে ♥️`; কোন সমস্যা হলে যোগাযোগ করুন 01740630116
+অর্ডার করুন নিশ্চিন্তে ♥️`;
